@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Detail</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>{{ student.name }}</h1>
-    <p>Email: {{ student.email }}</p>
-    <p>Enrollment Date: {{ student.enrollment_date }}</p>
-    <p>Description : {{ student.description }}</p>
-    <a href="{% url 'student-list' %}">Back to list</a>
+<body class="flex justify-center item-center">
+    <div class=" pt">
+
+        <h1 class="text-5xl pb-4">{{ student.name }}</h1>
+        <p>Email: {{ student.email }}</p>
+        <p>Enrollment Date: {{ student.enrollment_date }}</p>
+        <p>Description : {{ student.description }}</p>
+        <a href="{% url 'student-list' %}" class="px-4 py-2 ">Back to list</a>
+    </div>
 </body>
 </html>

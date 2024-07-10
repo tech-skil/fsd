@@ -1,0 +1,131 @@
+<!-- chat.py -->
+<!DOCTYPE html>
+<html class="h-full">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="bg-blue-100 flex flex-col h-full">
+    <h1 class="text-2xl md:text-3xl text-center font-bold py-4 md:py-6 text-white bg-blue-500 w-full">Welcome to our chat app! {{ request.user }}</h1>
+
+    <div class="flex-grow flex flex-col items-center justify-center p-2 md:p-4">
+        <div class="w-full max-w-2xl bg-blue-200 rounded-lg shadow-md flex flex-col" style="height: calc(100vh - 120px);">
+            <h1 class="bg-blue-600 rounded-t-lg py-2 text-white text-center text-xl md:text-2xl">{{ request.user.username }}</h1>
+            <div class="flex-grow overflow-y-auto p-2 md:p-4 space-y-2 md:space-y-3" id="id_chat_item_container">
+                <!-- Chat messages will be appended here -->
+            </div>
+
+            <div class="border-t border-blue-300 p-2 md:p-4 bg-blue-100">
+                <div class="flex">
+                    <input
+                        type="text"
+                        id="id_message_send_input"
+                        class="flex-grow border rounded-l-lg px-2 md:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Type your message..."
+                    />
+                    <button
+                        type="submit"
+                        id="id_message_send_button"
+                        class="bg-blue-300 text-white px-4 md:px-6 py-2 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 text-center">
+            {% if request.user.is_authenticated %}
+            <span class="mr-2">Logout the chat Page</span>
+            <form method="post" action="{% url 'logout-user' %}">
+                {% csrf_token %}
+                <button type="submit" class="text-blue-600 hover:text-blue-800 underline">Logout</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const chatSocket = new WebSocket("ws://" + window.location.host + "/");
+        chatSocket.onopen = function (e) {
+            console.log("The connection was setup successfully !");
+        };
+        chatSocket.onclose = function (e) {
+            console.log("Something unexpected happened !");
+        };
+
+        const messageInput = document.querySelector("#id_message_send_input");
+        const sendButton = document.querySelector("#id_message_send_button");
+
+        function updateSendButton() {
+            if (messageInput.value.trim() === '') {
+                sendButton.disabled = true;
+                sendButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+                sendButton.classList.add('bg-blue-300');
+            } else {
+                sendButton.disabled = false;
+                sendButton.classList.remove('bg-blue-300');
+                sendButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            }
+        }
+
+        messageInput.focus();
+        messageInput.addEventListener('input', updateSendButton);
+        messageInput.addEventListener('keyup', function(e) {
+            if (e.keyCode == 13 && !sendButton.disabled) {
+                sendButton.click();
+            }
+        });
+
+        sendButton.onclick = function (e) {
+            const messageText = messageInput.value.trim();
+            if (messageText !== '') {
+                chatSocket.send(JSON.stringify({ message: messageText, username: "{{ request.user.username }}" }));
+                messageInput.value = '';
+                updateSendButton();
+            }
+        };
+
+        function getColorFromUsername(username) {
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+            return "#" + "00000".substring(0, 6 - c.length) + c;
+        }
+
+        function createUserIcon(username) {
+            const color = getColorFromUsername(username);
+            const letter = username.charAt(0).toUpperCase();
+            return `<div class="w-6 h-6 md:w-8 md:h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-xs md:text-base" style="background-color: ${color};">${letter}</div>`;
+        }
+
+        chatSocket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            var div = document.createElement("div");
+            const isCurrentUser = data.username === "{{ request.user.username }}";
+            div.className = `flex items-start mb-2 md:mb-4 ${isCurrentUser ? 'justify-end' : 'justify-start'}`;
+            const userIcon = createUserIcon(data.username);
+
+            div.innerHTML = `
+                <div class="flex items-start ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'} max-w-[80%] md:max-w-[70%]">
+                    <div class="flex-shrink-0 ${isCurrentUser ? 'ml-1 md:ml-2' : 'mr-1 md:mr-2'}">
+                        ${userIcon}
+                    </div>
+                    <div class="${isCurrentUser ? 'bg-blue-500 font-medium  text-white' : 'bg-white'} rounded-lg p-2 md:p-3 shadow break-words overflow-hidden text-sm md:text-base">
+                        ${data.message}
+                    </div>
+                </div>
+            `;
+
+            document.querySelector("#id_chat_item_container").appendChild(div);
+            document.querySelector("#id_chat_item_container").scrollTop = document.querySelector("#id_chat_item_container").scrollHeight;
+        };
+
+        // Initial button state
+        updateSendButton();
+    </script>
+</body>
+</html>
